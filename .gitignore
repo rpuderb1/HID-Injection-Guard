@@ -1,0 +1,9 @@
+# IDE
+.idea/
+
+# Build artifacts
+*.o
+*.ko
+
+# Compiled binaries
+hid_guard
