@@ -7,6 +7,14 @@ This directory contains the Linux kernel module (LKM) for monitoring USB HID dev
 - **usb_monitor.c**: Main kernel module source code
 - **Makefile**: Build configuration for the kernel module
 
+## Prerequisites
+
+Kernel Headers:
+
+```bash
+sudo apt install linux-headers-$(uname -r)
+```
+
 ## Building
 
 ```bash
