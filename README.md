@@ -14,14 +14,23 @@ This project explores USB Human Interface Device (HID) security from both offens
 
 ```
 ├── arduino/              # Arduino HID injection firmware
-│   └── payloads/        # Different attack payload implementations
+│   ├── payloads/        # Different attack payload implementations
+│   │   ├── simple_payload.ino
+│   │   └── terminal_payload.ino
+│   └── README.md
 ├── kernel/              # Linux kernel module for USB monitoring
+│   ├── Makefile         # Kernel module build configuration
+│   ├── usb_monitor.c    # Kernel module source code
+│   └── README.md
 ├── daemon/              # User-space input monitoring daemon
+│   └── README.md
 ├── tests/               # Testing scripts and validation
 │   ├── scripts/         # Test automation scripts
-│   └── input-samples/   # Recorded keystroke patterns
+│   ├── input-samples/   # Recorded keystroke patterns
+│   └── README.md
 ├── docs/                # Project documentation and reports
-│   └── reports/         # Technical reports
+│   ├── reports/         # Technical reports
+│   └── README.md
 └── README.md            # This file
 ```
 
