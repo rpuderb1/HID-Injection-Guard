@@ -42,6 +42,17 @@ cd kernel
 make
 sudo insmod usb_monitor.ko
 sudo dmesg | tail -n 20  # Verify loading
+
+# Connect a USB HID device
+
+# View HID device information via sysfs
+cat /sys/kernel/usb_hid_monitor/vid
+cat /sys/kernel/usb_hid_monitor/pid
+cat /sys/kernel/usb_hid_monitor/manufacturer
+cat /sys/kernel/usb_hid_monitor/product
+
+# View all attributes at once
+grep -H . /sys/kernel/usb_hid_monitor/*
 ```
 
 ### 2. Build and Run Daemon
