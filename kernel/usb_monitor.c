@@ -11,13 +11,48 @@ MODULE_DESCRIPTION("USB HID Device Monitor");
 MODULE_VERSION("1.0");
 
 
+// Check if USB device has HID interface
+static bool is_hid_device(struct usb_device *udev) {
+    int config_idx, interface_idx;
+    struct usb_host_config *config;
+    struct usb_interface *interface;
+    struct usb_interface_descriptor *desc;
+
+    // Iterate through all configurations
+    for (config_idx = 0; config_idx < udev->descriptor.bNumConfigurations; config_idx++) {
+        config = &udev->config[config_idx];
+
+        // Iterate through all interfaces in this configuration
+        for (interface_idx = 0; interface_idx < config->desc.bNumInterfaces; interface_idx++) {
+            interface = config->interface[interface_idx];
+            if (!interface)
+                continue;
+
+            // Get interface descriptor
+            desc = &interface->altsetting[0].desc;
+
+            // Check if interface is HID class (0x03)
+            if (desc->bInterfaceClass == USB_CLASS_HID) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 // Called whenever a USB device is added or removed
 static int usb_notify_callback(struct notifier_block *self, unsigned long action, void *dev) {
     struct usb_device *udev = dev;
 
+    // Only process HID devices
+    if (!is_hid_device(udev)) {
+        return NOTIFY_OK;
+    }
+
     switch (action) {
     case USB_DEVICE_ADD:
-        printk(KERN_INFO "usb_monitor: USB device connected\n");
+        printk(KERN_INFO "usb_monitor: HID device connected\n");
 
         // Extract device information from device descriptor
         printk(KERN_INFO "usb_monitor:   VID: 0x%04x\n",
@@ -46,7 +81,7 @@ static int usb_notify_callback(struct notifier_block *self, unsigned long action
         break;
 
     case USB_DEVICE_REMOVE:
-        printk(KERN_INFO "usb_monitor: USB device disconnected\n");
+        printk(KERN_INFO "usb_monitor: HID device disconnected\n");
         printk(KERN_INFO "usb_monitor:   VID: 0x%04x, PID: 0x%04x\n",
                le16_to_cpu(udev->descriptor.idVendor),
                le16_to_cpu(udev->descriptor.idProduct));
