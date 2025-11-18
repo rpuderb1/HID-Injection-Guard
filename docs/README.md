@@ -5,6 +5,7 @@ This directory contains project documentation and reports.
 ## Contents
 
 - **USB_HID_Security_Project.pdf**: Original project specification
+- **PROGRESS_REPORT.md**: Development progress and challenges solved
 - **reports/**: Technical reports and analysis documents
 
 ## Report Structure

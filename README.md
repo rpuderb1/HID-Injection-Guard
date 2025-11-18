@@ -59,7 +59,7 @@ grep -H . /sys/kernel/usb_hid_monitor/*
 ```bash
 cd daemon
 make
-sudo ./hid_guard --debug
+sudo ./hid_guard
 ```
 
 ### 3. Compile and Upload Arduino Firmware
@@ -69,17 +69,16 @@ arduino-cli compile --fqbn arduino:avr:micro hid_injector.ino
 arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:avr:micro hid_injector.ino
 ```
 
-## Detection Algorithm
+## Detection Features
 
-The system uses a weighted scoring system to detect keystroke injection:
+The daemon monitors input devices and performs timing analysis:
 
-| Observation | Signature | Score |
-|-------------|-----------|-------|
-| **Keystroke Timing** | Low IKT + Low Jitter (very fast, consistent) | +25 |
-| **Behavior/Intent** | Rapid system commands (payload execution) | +75 |
-| **Human Signature** | Backspace or pause >1 second | -100 |
+- **Inter-Keystroke Timing (IKT)**: Measures time between consecutive keystrokes
+- **Jitter Analysis**: Calculates standard deviation of keystroke timing (detects unnaturally consistent patterns)
+- **Dynamic Device Detection**: Automatically monitors new input devices as they connect
+- **Per-Device Statistics**: Tracks timing metrics, keystroke counts, and connection duration
 
-**Detection Threshold**: Score ≥ 100 indicates potential injection attack
+Detection signature: HID injection shows consistent IKT ~1-4ms (physically impossible for humans), while human typing typically ranges from 50-200ms depending on typing speed.
 
 ## Requirements
 
@@ -92,18 +91,14 @@ The system uses a weighted scoring system to detect keystroke injection:
 
 ## Testing
 
-Run the test suite to validate detection accuracy:
-```bash
-cd tests/scripts
-./load_system.sh
-./run_tests.sh
-./analyze_logs.sh
-```
+Test the system by connecting the Arduino device with the kernel module and daemon running. Monitor kernel logs and daemon output to observe detection behavior.
 
 ## Documentation
 
 - Project specification: `docs/USB_HID_Security_Project.pdf`
+- Progress report: `docs/PROGRESS_REPORT.md`
 - Technical reports: `docs/reports/`
+
 - Per-directory documentation: See README.md in each subdirectory
 
 ## Academic Context

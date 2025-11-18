@@ -44,11 +44,23 @@ make clean
 
 ## Key Functionality
 
-- Register USB notifiers to detect device events
-- Identify HID class devices (interface class 0x03)
-- Extract device information (VID, PID, manufacturer, serial)
-- Create /sys entries for userspace communication
-- Log device connection/disconnection events
+- Registers USB notifiers to detect device connection/disconnection events
+- Identifies HID class devices (interface class 0x03)
+- Extracts device information (VID, PID, manufacturer, product, serial)
+- Exposes device information via sysfs at `/sys/kernel/usb_hid_monitor/`
+- Logs device connection/disconnection events to kernel log
+
+## Sysfs Interface
+
+The module creates the following sysfs attributes:
+
+- `/sys/kernel/usb_hid_monitor/vid` - Vendor ID (hexadecimal)
+- `/sys/kernel/usb_hid_monitor/pid` - Product ID (hexadecimal)
+- `/sys/kernel/usb_hid_monitor/manufacturer` - Manufacturer string
+- `/sys/kernel/usb_hid_monitor/product` - Product name string
+- `/sys/kernel/usb_hid_monitor/serial` - Serial number string
+
+These attributes contain information about the most recently connected HID device.
 
 ## Requirements
 

@@ -28,11 +28,11 @@ This directory contains test scripts and sample data for validating the detectio
 - Impact on system responsiveness
 - Scalability with multiple devices
 
-## Usage
+## Testing Approach
 
-Create test scripts that:
-1. Load the kernel module
-2. Start the daemon
-3. Execute test payloads
-4. Capture and analyze results
-5. Clean up and generate reports
+Test the system by:
+1. Loading the kernel module (`sudo insmod kernel/usb_monitor.ko`)
+2. Starting the daemon (`sudo daemon/hid_guard`)
+3. Connecting the Arduino device with attack payload
+4. Monitoring kernel logs (`dmesg`) and daemon output
+5. Observing detection behavior and timing statistics

@@ -37,21 +37,26 @@ sudo ./hid_guard --debug
 sudo ./hid_guard --daemon
 ```
 
-## Detection Algorithm
+## Implemented Features
 
-The daemon implements a weighted scoring system:
+- **Input Event Monitoring**: Reads raw input events from `/dev/input/eventX` devices
+- **Keystroke Parsing**: Filters EV_KEY events and maps keycodes to key names
+- **Dynamic Device Detection**: Uses inotify to automatically detect and monitor new input devices as they connect
+- **Timing Analysis**:
+  - Calculates Inter-Keystroke Timing (IKT) in milliseconds
+  - Tracks IKT values in circular buffer (last 100 keystrokes)
+  - Calculates mean IKT and jitter (standard deviation)
+  - Displays timing statistics every 10 keystrokes
+- **Device Management**:
+  - Handles device disconnections gracefully with consecutive error counter
+  - Tracks per-device statistics (connection time, keystroke count)
+  - Logs device lifecycle events
 
-- **+25 points**: Low IKT (fast typing) + Low Jitter (consistent timing)
-- **+75 points**: Rapid system commands (payload execution patterns)
-- **-100 points**: Human signature detected (backspace or pause >1 second)
-- **Threshold**: Score ≥ 100 triggers detection alert
+## Detection Signature
 
-## Key Functionality
-
-- Monitor /dev/input/eventX devices for keyboard events
-- Calculate Inter-Keystroke Timing (IKT) and jitter
-- Detect suspicious keystroke patterns
-- Log alerts to syslog or console
+HID injection attacks show distinctive timing patterns:
+- **Injection**: IKT ~1-4ms (extremely fast, consistent keystroke timing)
+- **Human typing**: IKT typically 50-200ms (varies by typing speed)
 
 ## Requirements
 
