@@ -16,6 +16,13 @@ struct device_info {
     struct timeval connected_at;
     int keystroke_count;
     int consecutive_errors;
+
+    // USB device identification (from kernel module via sysfs)
+    char vid[8];
+    char pid[8];
+    char manufacturer[64];
+    char product[64];
+    char serial[64];
 };
 
 struct input_state {

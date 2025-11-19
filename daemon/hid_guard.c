@@ -70,7 +70,14 @@ int main(void) {
 
             // Display keystroke with timing
             const char* key_name = input_keycode_name(ev.code);
-            printf("[%s] ", dev->path);
+
+            // Show device identification
+            if (strcmp(dev->product, "Unknown") != 0) {
+                printf("[%s] ", dev->product);
+            } else {
+                printf("[%s] ", dev->path);
+            }
+
             if (strcmp(key_name, "UNKNOWN") == 0) {
                 printf("Key: UNKNOWN (code=%d)", ev.code);
             } else {

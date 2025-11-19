@@ -13,6 +13,7 @@
 
 #define EVENT_BUF_LEN (10 * (sizeof(struct inotify_event) + 256))
 #define DEBUG 0
+#define SYSFS_BASE "/sys/kernel/usb_hid_monitor"
 
 // Internal state (static allocation to avoid malloc)
 static struct pollfd fds[MAX_DEVICES + 1];
@@ -23,6 +24,48 @@ static char inotify_buf[EVENT_BUF_LEN];
 static double timeval_diff_ms(struct timeval *start_time, struct timeval *end_time) {
     return (end_time->tv_sec - start_time->tv_sec) * 1000.0 +
            (end_time->tv_usec - start_time->tv_usec) / 1000.0;
+}
+
+// Read a single sysfs attribute
+static int read_sysfs_attr(const char *attr_name, char *buf, size_t buf_size) {
+    char path[256];
+    snprintf(path, sizeof(path), "%s/%s", SYSFS_BASE, attr_name);
+
+    FILE *f = fopen(path, "r");
+    if (!f) {
+        return -1;
+    }
+
+    if (fgets(buf, buf_size, f) == NULL) {
+        fclose(f);
+        return -1;
+    }
+
+    // Remove trailing newline
+    size_t len = strlen(buf);
+    if (len > 0 && buf[len - 1] == '\n') {
+        buf[len - 1] = '\0';
+    }
+
+    fclose(f);
+    return 0;
+}
+
+// Read USB device info from kernel module via sysfs
+static void read_device_usb_info(struct device_info *dev) {
+    // Initialize to "Unknown" in case sysfs is not available
+    strcpy(dev->vid, "Unknown");
+    strcpy(dev->pid, "Unknown");
+    strcpy(dev->manufacturer, "Unknown");
+    strcpy(dev->product, "Unknown");
+    strcpy(dev->serial, "Unknown");
+
+    // Attempt to read from sysfs (kernel module may not be loaded)
+    read_sysfs_attr("vid", dev->vid, sizeof(dev->vid));
+    read_sysfs_attr("pid", dev->pid, sizeof(dev->pid));
+    read_sysfs_attr("manufacturer", dev->manufacturer, sizeof(dev->manufacturer));
+    read_sysfs_attr("product", dev->product, sizeof(dev->product));
+    read_sysfs_attr("serial", dev->serial, sizeof(dev->serial));
 }
 
 // Add a new device to monitoring
@@ -47,6 +90,8 @@ static int add_device(struct input_state *state, const char *device_path) {
     gettimeofday(&state->devices[state->num_devices].connected_at, NULL);
     state->devices[state->num_devices].keystroke_count = 0;
     state->devices[state->num_devices].consecutive_errors = 0;
+
+    read_device_usb_info(&state->devices[state->num_devices]);
 
     state->num_devices++;
     state->poll_count++;
@@ -93,6 +138,15 @@ static int init_existing_devices(struct input_state *state) {
                 gettimeofday(&state->devices[state->num_devices].connected_at, NULL);
                 state->devices[state->num_devices].keystroke_count = 0;
                 state->devices[state->num_devices].consecutive_errors = 0;
+
+                // Don't read from kernel module for existing devices (sysfs logs last plugged in device)
+                // Initialize to "Unknown" (only new devices get real identification)
+                strcpy(state->devices[state->num_devices].vid, "Unknown");
+                strcpy(state->devices[state->num_devices].pid, "Unknown");
+                strcpy(state->devices[state->num_devices].manufacturer, "Unknown");
+                strcpy(state->devices[state->num_devices].product, "Unknown");
+                strcpy(state->devices[state->num_devices].serial, "Unknown");
+
                 printf("Monitoring: %s\n", state->devices[state->num_devices].path);
                 state->num_devices++;
                 state->poll_count++;
@@ -166,7 +220,16 @@ void input_process_new_devices(struct input_state *state) {
             snprintf(device_path, sizeof(device_path), "/dev/input/%s", event->name);
 
             if (add_device(state, device_path) == 0) {
-                printf("\n[NEW DEVICE] Now monitoring: %s\n\n", device_path);
+                // Get the device info that was just added
+                struct device_info *dev = &state->devices[state->num_devices - 1];
+
+                printf("\n[NEW DEVICE] %s\n", device_path);
+                printf("  VID:PID = %s:%s | %s - %s\n",
+                       dev->vid, dev->pid, dev->manufacturer, dev->product);
+                if (strcmp(dev->serial, "Unknown") != 0 && strlen(dev->serial) > 0) {
+                    printf("  Serial: %s\n", dev->serial);
+                }
+                printf("\n");
             }
         }
 
@@ -196,7 +259,12 @@ int input_read_event(struct input_state *state, int device_idx, struct input_eve
         gettimeofday(&current_time, NULL);
         double duration_sec = timeval_diff_ms(&state->devices[device_idx].connected_at, &current_time) / 1000.0;
 
-        printf("\n[DISCONNECT] Device removed: %s\n", state->devices[device_idx].path);
+        printf("\n[DISCONNECT] %s\n", state->devices[device_idx].path);
+        printf("  Device: %s - %s (VID:%s PID:%s)\n",
+               state->devices[device_idx].manufacturer,
+               state->devices[device_idx].product,
+               state->devices[device_idx].vid,
+               state->devices[device_idx].pid);
         printf("  Duration: %.2f seconds | Keystrokes: %d\n\n", duration_sec, state->devices[device_idx].keystroke_count);
 
         close(state->fds[poll_idx].fd);
