@@ -93,6 +93,11 @@ static int add_device(struct input_state *state, const char *device_path) {
 
     read_device_usb_info(&state->devices[state->num_devices]);
 
+    // TODO: Future enhancement - Device trust system
+    // - Check if VID:PID:Serial seen before in /var/lib/hid_guard/device_history.txt
+    // - Calculate trust score based on usage history
+    // - Flag first-time devices with higher suspicion
+
     state->num_devices++;
     state->poll_count++;
 

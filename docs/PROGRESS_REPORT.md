@@ -61,19 +61,17 @@
 - Buffer overflows (used `snprintf()` for safe string handling)
 - Sysfs memory management (proper `kobject_put()` cleanup)
 
-### 3. User-Space Daemon (40% Complete)
+### 3. User-Space Daemon (65% Complete)
 **Completed:**
-- Basic input monitoring - opens `/dev/input/event*`, reads raw events
-- Keystroke parsing - filters EV_KEY events, maps keycodes to key names
-- Dynamic device detection - uses inotify to detect new devices connecting in real-time, handles device disconnections gracefully
-- Timing analysis - calculates IKT (Inter-Keystroke Timing), jitter (standard deviation), displays statistics every 10 keystrokes
-
+- Basic input monitoring - opens `/dev/input/event*`, reads raw events, parses keystrokes
+- Dynamic device detection - uses inotify to detect new devices in real-time, handles disconnections gracefully
+- Timing analysis - calculates IKT (Inter-Keystroke Timing), jitter (standard deviation), displays periodic statistics
+- Command buffering - reconstructs complete commands with shift/caps lock state tracking, character mapping
+- Kernel module integration - reads USB device identification (VID/PID/manufacturer/product/serial) from sysfs for newly connected devices
 
 **Remaining:**
-- Command buffering and reconstruction
-- Device trust system
-- Pattern matching for malicious commands
-- Attack chain detection
+- Pattern matching for malicious commands (curl, wget, base64, eval, persistence, etc.)
+- Attack chain detection (Download→Execute→Persist sequences)
 - Composite scoring and alerting
 
 **Challenges Solved:**
@@ -89,8 +87,10 @@
   - Solution: Consecutive error counter - ignore first 3 errors (transient), remove after 4+ (real disconnect)
   - Prevents premature device removal while allowing graceful cleanup on real disconnects
 
-**Current Challenge:**
-- Command reconstruction from keycodes (need shift state tracking for proper character mapping)
+- **Kernel module single-device limitation:**
+  - Kernel module stores only the LAST connected HID device in global variables
+  - Reading sysfs for all existing devices at startup would mislabel them all identically
+  - Solution: Only read sysfs when new device connects (attack vector)
 
 ---
 

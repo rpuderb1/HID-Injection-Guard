@@ -13,6 +13,14 @@ MODULE_DESCRIPTION("USB HID Device Monitor");
 MODULE_VERSION("1.0");
 
 // Store last HID device information
+// TODO: Future enhancement - Multi-device tracking
+// Current limitation: Only tracks the last connected HID device
+// To track all devices simultaneously:
+// - Replace global variables with linked list or array
+// - Create per-device sysfs entries (/sys/kernel/usb_hid_monitor/device_0/vid)
+// - Add mutex protection for thread safety
+// - Track connection/disconnection events
+
 static u16 last_vid = 0;
 static u16 last_pid = 0;
 static char last_manufacturer[128] = "none";

@@ -13,25 +13,31 @@ This project explores USB Human Interface Device (HID) security from both offens
 ## Project Structure
 
 ```
-├── arduino/              # Arduino HID injection firmware
-│   ├── payloads/        # Different attack payload implementations
+├── arduino/                         # Arduino HID injection firmware
+│   ├── payloads/                    # Different attack payload implementations
 │   │   ├── simple_payload.ino
 │   │   └── terminal_payload.ino
 │   └── README.md
-├── kernel/              # Linux kernel module for USB monitoring
-│   ├── Makefile         # Kernel module build configuration
-│   ├── usb_monitor.c    # Kernel module source code
+├── kernel/                          # Linux kernel module for USB monitoring
+│   ├── Makefile                     # Kernel module build configuration
+│   ├── usb_monitor.c                # Kernel module source code
 │   └── README.md
-├── daemon/              # User-space input monitoring daemon
+├── daemon/                           # User-space input monitoring daemon
+│   ├── hid_guard.c                   # Main daemon orchestration
+│   ├── input_handler.c/h             # Device discovery and event reading
+│   ├── detector.c/h                  # Timing analysis and command buffering
+│   ├── Makefile                      # Daemon build configuration
 │   └── README.md
-├── tests/               # Testing scripts and validation
-│   ├── scripts/         # Test automation scripts
-│   ├── input-samples/   # Recorded keystroke patterns
+├── tests/                            # Testing scripts and validation
+│   ├── scripts/                      # Test automation scripts
+│   ├── input-samples/                # Recorded keystroke patterns
 │   └── README.md
-├── docs/                # Project documentation and reports
-│   ├── reports/         # Technical reports
+├── docs/                             # Project documentation and reports
+│   ├── PROGRESS_REPORT.md            # Implementation progress
+│   ├── USB_HID_Security_Project.pdf  # Project specification
+│   ├── reports/                      # Technical reports
 │   └── README.md
-└── README.md            # This file
+└── README.md                         # Main Documentation (this file)
 ```
 
 ## Quick Start
@@ -71,14 +77,24 @@ arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:avr:micro hid_injector.ino
 
 ## Detection Features
 
-The daemon monitors input devices and performs timing analysis:
+The daemon monitors input devices and performs multi-layered analysis:
 
-- **Inter-Keystroke Timing (IKT)**: Measures time between consecutive keystrokes
+**Device Identification:**
+- **USB Device Recognition**: Integrates with kernel module to identify devices (VID/PID/manufacturer/product)
+- **Dynamic Device Detection**: Automatically monitors new input devices as they connect via inotify
+- **Device Tracking**: Associates USB metadata with input events for forensic analysis
+
+**Timing Analysis:**
+- **Inter-Keystroke Timing (IKT)**: Measures time between consecutive keystrokes (1-4ms = injection, 50-200ms = human)
 - **Jitter Analysis**: Calculates standard deviation of keystroke timing (detects unnaturally consistent patterns)
-- **Dynamic Device Detection**: Automatically monitors new input devices as they connect
 - **Per-Device Statistics**: Tracks timing metrics, keystroke counts, and connection duration
 
-Detection signature: HID injection shows consistent IKT ~1-4ms (physically impossible for humans), while human typing typically ranges from 50-200ms depending on typing speed.
+**Behavioral Analysis:**
+- **Command Reconstruction**: Buffers keystrokes and reconstructs complete commands with shift/caps lock tracking
+- **Character Mapping**: Converts keycodes to printable characters for pattern analysis
+
+**Detection Signature:**
+HID injection shows consistent IKT ~1-4ms (physically impossible for humans), while human typing typically ranges from 50-200ms depending on typing speed.
 
 ## Requirements
 

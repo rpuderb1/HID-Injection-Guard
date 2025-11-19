@@ -38,6 +38,26 @@ struct detector_state {
     int cmd_length;
     int shift_pressed;
     int caps_lock_active;
+
+    // TODO: Pattern matching (context-aware weighted scoring)
+    // - Download commands: curl, wget (if piped to sh/bash [increase score])
+    // - Obfuscation patterns:
+    //   - base64 + decode operations
+    //   - eval with command substitution $(curl...)
+    //   - exec with /dev/tcp/ or bash -i (reverse shell)
+    // - Execution patterns: chmod +x followed by ./
+    // - Persistence: crontab modifications, .bashrc/.profile edits
+    // - Command chaining: Multiple pipes >3
+
+    // TODO: Attack chain detection
+    // - Track command history with timestamps
+    // - Detect Download→Execute sequences
+    // - Detect full attack chains (Download→Execute→Persist)
+
+    // TODO: Composite scoring & alerts
+    // - Implement weighted scoring system
+    // - Set alert thresholds
+    // - Add syslog integration
 };
 
 void detector_init(struct detector_state *state);
