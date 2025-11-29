@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE
 #include "input_handler.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,6 +53,7 @@ static int read_sysfs_attr(const char *attr_name, char *buf, size_t buf_size) {
 }
 
 // Read USB device info from kernel module via sysfs
+// Handles race condition: /dev/input/eventX created before sysfs updated
 static void read_device_usb_info(struct device_info *dev) {
     // Initialize to "Unknown" in case sysfs is not available
     strcpy(dev->vid, "Unknown");
@@ -59,6 +61,9 @@ static void read_device_usb_info(struct device_info *dev) {
     strcpy(dev->manufacturer, "Unknown");
     strcpy(dev->product, "Unknown");
     strcpy(dev->serial, "Unknown");
+
+    // Small delay to let kernel module's USB notifier update sysfs
+    usleep(10000);
 
     // Attempt to read from sysfs (kernel module may not be loaded)
     read_sysfs_attr("vid", dev->vid, sizeof(dev->vid));

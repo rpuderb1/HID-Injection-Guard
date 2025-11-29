@@ -106,13 +106,13 @@ static bool is_hid_device(struct usb_device *udev) {
 static int usb_notify_callback(struct notifier_block *self, unsigned long action, void *dev) {
     struct usb_device *udev = dev;
 
-    // Only process HID devices
-    if (!is_hid_device(udev)) {
-        return NOTIFY_OK;
-    }
-
     switch (action) {
     case USB_DEVICE_ADD:
+        // Only process HID devices
+        if (!is_hid_device(udev)) {
+            return NOTIFY_OK;
+        }
+
         printk(KERN_INFO "usb_monitor: HID device connected\n");
 
         // Extract & store device information
@@ -149,10 +149,17 @@ static int usb_notify_callback(struct notifier_block *self, unsigned long action
         break;
 
     case USB_DEVICE_REMOVE:
-        printk(KERN_INFO "usb_monitor: HID device disconnected\n");
-        printk(KERN_INFO "usb_monitor:   VID: 0x%04x, PID: 0x%04x\n",
-               le16_to_cpu(udev->descriptor.idVendor),
-               le16_to_cpu(udev->descriptor.idProduct));
+        // Device config is already torn down, can't check is_hid_device()
+        // Match against stored VID/PID from the last HID device connection
+        if (le16_to_cpu(udev->descriptor.idVendor) == last_vid &&
+            le16_to_cpu(udev->descriptor.idProduct) == last_pid) {
+            printk(KERN_INFO "usb_monitor: HID device disconnected\n");
+            printk(KERN_INFO "usb_monitor:   VID: 0x%04x\n", last_vid);
+            printk(KERN_INFO "usb_monitor:   PID: 0x%04x\n", last_pid);
+            printk(KERN_INFO "usb_monitor:   Manufacturer: %s\n", last_manufacturer);
+            printk(KERN_INFO "usb_monitor:   Product: %s\n", last_product);
+            printk(KERN_INFO "usb_monitor:   Serial: %s\n", last_serial);
+        }
         break;
     }
     return NOTIFY_OK;
