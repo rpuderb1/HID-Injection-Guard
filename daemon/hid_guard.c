@@ -52,18 +52,18 @@ int main(void) {
                 continue;
             }
 
+            // Get device info for device tracking
+            struct device_info *dev = input_get_device_info(&input, device_idx);
+
             // Filter to key presses only
             if (!input_is_key_press(&ev)) {
                 // Still process for shift tracking
-                detector_process_keystroke(&detector, &ev);
+                detector_process_keystroke(&detector, dev, &ev);
                 continue;
             }
 
-            // Get device info for display
-            struct device_info *dev = input_get_device_info(&input, device_idx);
-
             // Analyze keystroke timing and buffer command
-            double ikt_ms = detector_process_keystroke(&detector, &ev);
+            double ikt_ms = detector_process_keystroke(&detector, dev, &ev);
 
             // Update device keystroke counter
             dev->keystroke_count++;
@@ -88,11 +88,6 @@ int main(void) {
                 printf(" | IKT: %7.2f ms", ikt_ms);
             }
             printf("\n");
-
-            // Display periodic statistics
-            if (detector_should_show_stats(&detector)) {
-                detector_display_stats(&detector);
-            }
         }
     }
 

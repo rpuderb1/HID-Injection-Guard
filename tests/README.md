@@ -1,38 +1,48 @@
-# Testing and Validation
+# HID Guard Testing
 
-This directory contains test scripts and sample data for validating the detection system.
+This directory contains test tools for validating the HID injection detection system.
 
-## Structure
+## Test Files
 
-- **scripts/**: Test automation scripts
+### 1. Automated Unit Tests (`test_detector`)
 
-## Test Categories
+Validates pattern matching logic
 
-### 1. Detection Accuracy Tests
-- Verify detection of various injection payloads
-- Measure false positive rate with legitimate typing
-- Test edge cases and boundary conditions
+**Build:**
+```bash
+make
+```
 
-### 2. Timing Analysis Tests
-- Analyze detection time window
-- Measure response latency
-- Test with varying keystroke speeds
+**Run:**
+```bash
+./test_detector
+```
 
-### 3. Evasion Technique Tests
-- Test payloads with added delays
-- Verify detection of sophisticated attacks
-- Measure effectiveness of timing randomization
+**Test:**
+- ✅ 14 different command patterns
+- ✅ Scoring calculations
+- ✅ All pattern detection types (download, obfuscation, execution, persistence, chaining)
 
-### 4. Performance Tests
-- CPU and memory usage monitoring
-- Impact on system responsiveness
-- Scalability with multiple devices
+---
 
-## Testing Approach
+### 2. Arduino HID Injection Testing
+```bash
+# Load kernel module
+cd ../kernel
+sudo insmod usb_monitor.ko
 
-Test the system by:
-1. Loading the kernel module (`sudo insmod kernel/usb_monitor.ko`)
-2. Starting the daemon (`sudo daemon/hid_guard`)
-3. Connecting the Arduino device with attack payload
-4. Monitoring kernel logs (`dmesg`) and daemon output
-5. Observing detection behavior and timing statistics
+# Start daemon
+cd ../daemon
+sudo ./hid_guard
+
+# Plug in Arduino with malicious payload
+# Observe: Fast IKT (~1-5ms), pattern detection alerts
+```
+
+---
+
+## Cleaning Up
+
+```bash
+make clean
+```

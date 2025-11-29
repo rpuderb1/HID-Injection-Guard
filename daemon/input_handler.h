@@ -11,6 +11,8 @@
  * Handles all input device management and event reading
  */
 
+#define IKT_BUFFER_SIZE 100
+
 struct device_info {
     char *path;
     struct timeval connected_at;
@@ -23,6 +25,14 @@ struct device_info {
     char manufacturer[64];
     char product[64];
     char serial[64];
+
+    // Per-device timing tracking
+    struct timeval last_key_time;
+    int has_last_key;
+    double ikt_buffer[IKT_BUFFER_SIZE];
+    int ikt_count;
+    int ikt_index;
+    int total_keys;
 };
 
 struct input_state {
