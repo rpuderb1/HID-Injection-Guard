@@ -13,3 +13,6 @@ modules.order
 
 # Daemon build artifacts
 daemon/hid_guard
+
+# Test build artifacts
+tests/test_detector

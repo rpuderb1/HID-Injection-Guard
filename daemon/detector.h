@@ -30,6 +30,7 @@ struct detector_state {
     int cmd_length;
     int shift_pressed;
     int caps_lock_active;
+    int backspace_count;
 
     // Pattern matching & scoring
     int pattern_download; // curl, wget detected

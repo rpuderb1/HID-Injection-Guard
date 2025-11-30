@@ -22,7 +22,11 @@ detector.o: $(DAEMON_DIR)/detector.c $(DAEMON_DIR)/detector.h
 input_handler.o: $(DAEMON_DIR)/input_handler.c $(DAEMON_DIR)/input_handler.h
 	$(CC) $(CFLAGS) -c $(DAEMON_DIR)/input_handler.c -o input_handler.o
 
+test: $(TEST_DETECTOR)
+	@echo "Running HID Guard tests..."
+	@./$(TEST_DETECTOR)
+
 clean:
 	rm -f $(TEST_DETECTOR) *.o
 
-.PHONY: all clean
+.PHONY: all clean test

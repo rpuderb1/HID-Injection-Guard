@@ -114,8 +114,10 @@ double detector_process_keystroke(struct detector_state *state, struct device_in
         }
         state->cmd_length = 0;
         state->cmd_buffer[0] = '\0';
+        state->backspace_count = 0;  // Reset for next command
     } else if (ev->code == KEY_BACKSPACE) {
-        // Remove last character
+        // Remove last character and track mistake (human indicator)
+        state->backspace_count++;
         if (state->cmd_length > 0) {
             state->cmd_length--;
             state->cmd_buffer[state->cmd_length] = '\0';
@@ -192,8 +194,15 @@ static int detect_piped_download(const char *cmd) {
 }
 
 static int detect_base64(const char *cmd) {
-    return contains_pattern(cmd, "base64") &&
-           (contains_pattern(cmd, "-d") || contains_pattern(cmd, "--decode"));
+    int has_base64_decode = contains_pattern(cmd, "base64") &&
+                           (contains_pattern(cmd, "-d") || contains_pattern(cmd, "--decode"));
+
+    int piped_to_shell = contains_pattern(cmd, "| sh") ||
+                        contains_pattern(cmd, "| bash") ||
+                        contains_pattern(cmd, "|sh") ||
+                        contains_pattern(cmd, "|bash");
+
+    return has_base64_decode && piped_to_shell;
 }
 
 // eval with command substitution
@@ -262,72 +271,81 @@ void detector_analyze_command(struct detector_state *state, struct device_info *
     state->pattern_persistence = detect_persistence(command);
     state->pattern_command_chain = detect_command_chaining(command);
 
-    // Analyze timing for automation detection using device's buffer
+    // Reverse shells are malicious
+    if (state->pattern_reverse_shell) {
+        state->current_score = 150;
+        state->pattern_fast_timing = 2;  // Display automation warning
+        goto display_alert;
+    }
+
+    // Calculate base severity (0-10 scale based on pattern maliciousness)
+    double base_severity = 0.0;
+
+    // Highest severity pattern wins
+    if (state->pattern_eval) base_severity = 8.0; // High risk
+    else if (state->pattern_persistence) base_severity = 7.0; // High risk
+    else if (state->pattern_base64) base_severity = 6.5; // Moderate-High
+    else if (state->pattern_piped_download) base_severity = 5.0; // Moderate
+    else if (state->pattern_execution) base_severity = 3.0; // Low-Moderate
+    else if (state->pattern_command_chain) base_severity = 2.5; // Low
+    else if (state->pattern_download) base_severity = 2.0; // Low
+
+    // Calculate timing confidence multiplier (1.0 - 4.0)
+    double timing_multiplier = 1.0;
     state->pattern_fast_timing = 0;
-    if (device->ikt_count >= 10) {  // Need enough samples from device
-        // Count fast keystrokes
-        int fast_count = 0;
-        int very_fast_count = 0;
-        int total_valid = 0;
 
-        for (int idx = 0; idx < device->ikt_count; idx++) {
-            double ikt = device->ikt_buffer[idx];
-            // Ignore outliers (terminal opening, human pauses, etc.)
-            if (ikt < 1000.0) {
-                total_valid++;
-                if (ikt < 15.0) fast_count++;
-                if (ikt < 5.0) very_fast_count++;
-            }
-        }
+    if (device->ikt_count >= 10) {
+        struct timing_stats stats = detector_get_stats(device);
 
-        // If >50% of device's keystrokes are very fast (<5ms), it's automation
-        if (total_valid >= 10 && very_fast_count > (total_valid * 50 / 100)) {
+        // Very fast typing: ~95% confidence it's automated
+        if (stats.mean_ikt < 5.0 && stats.jitter < 10.0) {
+            timing_multiplier = 3.8;
             state->pattern_fast_timing = 2;
         }
-        // If >40% of device's keystrokes are fast (<15ms), likely automation
-        else if (total_valid >= 10 && fast_count > (total_valid * 40 / 100)) {
+        // Fast typing: ~80% confidence it's automated
+        else if (stats.mean_ikt < 15.0 && stats.jitter < 100.0) {
+            timing_multiplier = 2.6;
             state->pattern_fast_timing = 1;
+        }
+        // Moderately fast: ~30% confidence (could be fast human)
+        else if (stats.mean_ikt < 50.0) {
+            timing_multiplier = 1.5;
+        }
+        // Normal human timing: ~5% baseline suspicion
+        else {
+            timing_multiplier = 1.05;
         }
     }
 
-    // Weighted threat score
-    int score = 0;
+    // Human behavior indicators (mistakes = human)
+    if (state->backspace_count > 0 && state->pattern_fast_timing > 0) {
+        // Reduce timing multiplier by 30-50% based on mistake frequency
+        double human_factor = 1.0 - (0.3 + (state->backspace_count * 0.05));
+        if (human_factor < 0.5) human_factor = 0.5;  // Max 50% reduction
+        timing_multiplier *= human_factor;
 
-    // Download commands: Low risk
-    if (state->pattern_download) score += 15;
-
-    // Piped download: Moderate risk
-    if (state->pattern_piped_download) score += 35;
-
-    // Base64 decode: Moderate-High risk
-    if (state->pattern_base64) score += 45;
-
-    // Eval with command substitution: High risk
-    if (state->pattern_eval) score += 60;
-
-    // Reverse shell: Critical risk
-    if (state->pattern_reverse_shell) score += 100;
-
-    // Execution patterns: Low risk
-    if (state->pattern_execution) score += 20;
-
-    // Persistence: Moderate-High risk
-    if (state->pattern_persistence) score += 50;
-
-    // Command chaining: Low risk
-    if (state->pattern_command_chain) score += 15;
-
-    // Timing: Crucial to detect injection vs legitimate use
-    if (state->pattern_fast_timing == 2) {
-        score += 75;  // IKT <5ms, jitter <2ms - nearly certain automation
-    } else if (state->pattern_fast_timing == 1) {
-        score += 50;  // IKT <10ms, jitter <5ms - likely automation
+        // Downgrade automation flag if mistakes were made
+        if (state->pattern_fast_timing == 2 && state->backspace_count >= 2) {
+            state->pattern_fast_timing = 1;  // Demote to "likely" from "certain"
+        } else if (state->pattern_fast_timing == 1 && state->backspace_count >= 3) {
+            state->pattern_fast_timing = 0;  // Clear automation flag
+        }
     }
 
-    state->current_score = score;
+    // Calculate final score
+    double final_score = base_severity * timing_multiplier * 10.0;
+
+    // FHigh-severity patterns can't fall too low
+    if (base_severity >= 7.0 && final_score < 60.0) {
+        final_score = 60.0;
+    }
+
+    state->current_score = (int)final_score;
+
+display_alert:
 
     // Display pattern analysis if patterns detected
-    if (score > 0) {
+    if (state->current_score > 0) {
         printf("┌─────────────────────────────────────────────────────────────────┐\n");
         printf("│ THREAT DETECTION ALERT                                          │\n");
         printf("├─────────────────────────────────────────────────────────────────┤\n");
@@ -360,22 +378,27 @@ void detector_analyze_command(struct detector_state *state, struct device_info *
 
         // Timing-based patterns
         if (state->pattern_fast_timing == 2) {
-            printf("│ AUTOMATION: Very fast typing │\n");
+            printf("│ AUTOMATION: Very fast typing detected (<5ms IKT)        │\n");
         } else if (state->pattern_fast_timing == 1) {
-            printf("│ AUTOMATION: Fast typing detected       │\n");
+            printf("│ AUTOMATION: Fast typing detected (<15ms IKT)            │\n");
+        }
+
+        // Human behavior indicators (only display if score is reduced)
+        if (state->backspace_count > 0 && state->pattern_fast_timing > 0) {
+            printf("│ HUMAN INDICATOR: %d backspace(s) detected (reduced score) │\n", state->backspace_count);
         }
 
         printf("├─────────────────────────────────────────────────────────────────┤\n");
-        printf("│ TOTAL THREAT SCORE: %-3d                                        │\n", score);
+        printf("│ TOTAL THREAT SCORE: %-3d                                        │\n", state->current_score);
 
-        if (score >= 150) {
-            printf("│ THREAT LEVEL: Active exploitation detected       │\n");
-        } else if (score >= 100) {
-            printf("│ THREAT LEVEL: Likely malicious activity              │\n");
-        } else if (score >= 50) {
-            printf("│ THREAT LEVEL: Suspicious activity                  │\n");
+        if (state->current_score >= 100) {
+            printf("│ THREAT LEVEL: CRITICAL - Active exploitation              │\n");
+        } else if (state->current_score >= 60) {
+            printf("│ THREAT LEVEL: HIGH - Likely malicious activity            │\n");
+        } else if (state->current_score >= 30) {
+            printf("│ THREAT LEVEL: MEDIUM - Suspicious, investigate            │\n");
         } else {
-            printf("│ THREAT LEVEL: Potentially suspicious                  │\n");
+            printf("│ THREAT LEVEL: LOW - Monitor only                          │\n");
         }
 
         printf("└─────────────────────────────────────────────────────────────────┘\n\n");
