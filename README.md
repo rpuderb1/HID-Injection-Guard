@@ -13,31 +13,41 @@ This project explores USB Human Interface Device (HID) security from both offens
 ## Project Structure
 
 ```
-├── arduino/                         # Arduino HID injection firmware
-│   ├── payloads/                    # Different attack payload implementations
-│   │   ├── simple_payload.ino
-│   │   └── terminal_payload.ino
-│   └── README.md
-├── kernel/                          # Linux kernel module for USB monitoring
-│   ├── Makefile                     # Kernel module build configuration
-│   ├── usb_monitor.c                # Kernel module source code
-│   └── README.md
-├── daemon/                           # User-space input monitoring daemon
-│   ├── hid_guard.c                   # Main daemon orchestration
-│   ├── input_handler.c/h             # Device discovery and event reading
-│   ├── detector.c/h                  # Timing analysis and command buffering
-│   ├── Makefile                      # Daemon build configuration
-│   └── README.md
-├── tests/                            # Testing scripts and validation
-│   ├── scripts/                      # Test automation scripts
-│   ├── input-samples/                # Recorded keystroke patterns
-│   └── README.md
-├── docs/                             # Project documentation and reports
-│   ├── PROGRESS_REPORT.md            # Implementation progress
-│   ├── USB_HID_Security_Project.pdf  # Project specification
-│   ├── reports/                      # Technical reports
-│   └── README.md
-└── README.md                         # Main Documentation (this file)
+HID-Injection-Guard/
+├── README.md                           # Main project documentation (this file)
+│
+├── arduino/                            # Arduino HID injection firmware
+│   ├── payloads/                       # Attack payload implementations
+│   │   ├── README.md                   # Payload documentation
+│   │   ├── revshell.ino                # Reverse shell with evidence hiding
+│   │   ├── simple_payload.ino          # Basic keystroke injection
+│   │   └── terminal_payload.ino        # Terminal command execution
+│   └── README.md                       # Arduino component documentation
+│
+├── daemon/                             # User-space input monitoring daemon
+│   ├── detector.c                      # Timing analysis and pattern matching
+│   ├── detector.h                      # Detector interface
+│   ├── hid_guard.c                     # Main daemon orchestration
+│   ├── input_handler.c                 # Device discovery and event reading
+│   ├── input_handler.h                 # Input handler interface
+│   ├── Makefile                        # Daemon build configuration
+│   └── README.md                       # Daemon architecture documentation
+│
+├── docs/                               # Project documentation and reports
+│   ├── PROGRESS_REPORT.md              # Implementation progress and challenges
+│   ├── README.md                       # Documentation index
+│   ├── TECHNICAL_REPORT.md             # Technical report ⭐
+│   └── USB_HID_Security_Project.md     # Project specification
+│
+├── kernel/                             # Linux kernel module for USB monitoring
+│   ├── Makefile                        # Kernel module build configuration
+│   ├── README.md                       # Kernel module documentation
+│   └── usb_monitor.c                   # Kernel module source code
+│
+└── tests/                              # Testing framework and validation
+    ├── Makefile                        # Test build configuration
+    ├── README.md                       # Testing framework documentation
+    └── test_detector.c                 # Unit tests for detector logic
 ```
 
 ## Quick Start
@@ -111,18 +121,25 @@ Test the system by connecting the Arduino device with the kernel module and daem
 
 ## Documentation
 
-- Project specification: `docs/USB_HID_Security_Project.pdf`
-- Progress report: `docs/PROGRESS_REPORT.md`
-- Technical reports: `docs/reports/`
+### Project Documentation
+- **Project Specification**: `docs/USB_HID_Security_Project.md`
+- **Technical Report**: `docs/TECHNICAL_REPORT.md`
+- **Progress Report**: `docs/PROGRESS_REPORT.md`
+- **Component READMEs**: See README.md in each subdirectory for detailed component documentation
 
-- Per-directory documentation: See README.md in each subdirectory
+### Quick Links
+- [Kernel Module Documentation](kernel/README.md)
+- [Daemon Documentation](daemon/README.md)
+- [Arduino Payloads Documentation](arduino/README.md)
+- [Testing Documentation](tests/README.md)
 
 ## Academic Context
 
-This project demonstrated core OS concepts including:
-- Kernel module development
-- Device driver interaction
-- Process management
-- USB subsystem architecture
-- System security mechanisms
-- User/kernel space communication
+This project demonstrates core OS concepts including:
+
+- **Kernel Module Development**: Loadable kernel modules, USB notifier chains, reference counting
+- **Device Driver Interaction**: USB subsystem architecture, HID class drivers, input event layer
+- **Process Management**: User-space daemons, resource management, privilege handling
+- **USB Subsystem Architecture**: Device enumeration, descriptor parsing, sysfs interface
+- **System Security Mechanisms**: Behavioral analysis, anomaly detection, defense in depth
+- **User/Kernel Space Communication**: Sysfs virtual filesystem for data exchange

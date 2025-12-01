@@ -41,7 +41,7 @@
 
 ## Progress Made
 
-### 1. Arduino HID Attack Vector (100% Complete)
+### 1. Arduino HID Attack Vector
 - Firmware successfully enumerates as USB keyboard
 - Executes pre-programmed keystroke sequences
 - Tested with multiple payload types
@@ -49,7 +49,7 @@
 **Challenges Solved:**
 - USB enumeration timing (added delay after `Keyboard.begin()`)
 
-### 2. Linux Kernel Module (100% Complete)
+### 2. Linux Kernel Module
 - Monitors USB bus using a notifier chain
 - Detects HID devices (class 0x03 at interface level)
 - Extracts VID, PID, manufacturer, product, serial
@@ -61,18 +61,15 @@
 - Buffer overflows (used `snprintf()` for safe string handling)
 - Sysfs memory management (proper `kobject_put()` cleanup)
 
-### 3. User-Space Daemon (65% Complete)
-**Completed:**
+### 3. User-Space Daemon
 - Basic input monitoring - opens `/dev/input/event*`, reads raw events, parses keystrokes
 - Dynamic device detection - uses inotify to detect new devices in real-time, handles disconnections gracefully
 - Timing analysis - calculates IKT (Inter-Keystroke Timing), jitter (standard deviation), displays periodic statistics
 - Command buffering - reconstructs complete commands with shift/caps lock state tracking, character mapping
 - Kernel module integration - reads USB device identification (VID/PID/manufacturer/product/serial) from sysfs for newly connected devices
-
-**Remaining:**
-- Pattern matching for malicious commands (curl, wget, base64, eval, persistence, etc.)
-- Attack chain detection (Download→Execute→Persist sequences)
-- Composite scoring and alerting
+- Pattern matching for malicious commands (curl, wget, base64, eval, persistence, reverse shells, etc.)
+- Weighted scoring system with timing multipliers
+- Human behavior detection (backspace, pauses > 1 second)
 
 **Challenges Solved:**
 - **Race condition with HID injection timing:**
@@ -94,23 +91,31 @@
 
 ---
 
-## Task Distribution
+### 4. Testing Framework
+- Unit tests for detector logic (`tests/test_detector.c`)
+- Test input samples for benign vs. malicious patterns
+- Integration testing with Arduino payloads
 
-**Rylan:**
-- Arduino firmware development and testing
-- Kernel module (notifier registration, descriptor parsing, HID filtering, sysfs creation, testing)
-- Daemon foundation (input monitoring, keystroke parsing)
-- Daemon core: Timing analysis, command buffering, device trust
-- Research (HID injection techniques, detection strategies)
- 
-**Gideon:**
+---
 
-- Pattern detection: Pattern database, command matching, attack chain detection, scoring/alerts
-- Testing framework: Test scripts, false positive measurement
+## Tasks
 
-**Both:**
-- Arduino payload development (4-5 attack scenarios)
-- End-to-end integration testing
-- Presentation preparation: Slides, live demo, talking points
-- Technical report and architecture diagrams
-- Final review
+- Arduino firmware development and testing (3 payloads)
+- Kernel module implementation (notifier registration, descriptor parsing, HID filtering, sysfs creation)
+- Daemon foundation (input monitoring, keystroke parsing, event multiplexing)
+- Daemon core (timing analysis, command buffering, device lifecycle management)
+- Research (HID injection techniques, detection strategies, USB subsystem)
+- Pattern detection (pattern database, command matching, attack chain detection)
+- Testing framework (unit tests, integration tests, false positive measurement)
+- Weighted scoring system
+- Technical documentation and code comments
+- Arduino payload development and testing
+- Security analysis (evasion techniques, defense effectiveness)
+
+
+
+**Future:**
+- Pattern detection (attack chain detection)
+- Weighted scoring (alerting logic)
+- Performance profiling and optimization
+- Technical report writing
