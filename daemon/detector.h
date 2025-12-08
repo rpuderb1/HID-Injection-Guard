@@ -50,8 +50,6 @@ struct detector_state {
     // - Detect full attack chains (Download→Execute→Persist)
 
     // TODO: Composite scoring & alerts
-    // - Implement weighted scoring system
-    // - Set alert thresholds
     // - Add syslog integration
 };
 
